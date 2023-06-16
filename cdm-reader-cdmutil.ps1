@@ -1,14 +1,11 @@
-get-content ".env" | foreach {
+$cdmconfig = @{}
+
+Get-Content ".env" | foreach {
     $name, $value = $_.split('=', 2)
-    set-content env:\$name $value
+    $cdmconfig.Add($name, $value)
 }
 
-$TenantId = $env:TenantId
-$AccessKey = $env:AccessKey
-$ManifestURL = $env:ManifestURL
-$TargetDbConnectionString = $env:TargetDbConnectionString
-$CDMUtilPath = $env:CDMUtilPath
-
+$CDMUtilPath = "./cdmutil"
 #$CDMUtilPath = "$($env:TMPDIR)/cdmutil"
 
 $cdmutilurl = "https://github.com/microsoft/Dynamics-365-FastTrack-Implementation-Assets/raw/master/Analytics/CDMUtilSolution/CDMUtilConsoleApp.zip"
@@ -30,8 +27,12 @@ if (-Not (Test-Path $configpath)) {
 }
 
 $xml = [xml](Get-Content -Path $configpath)
-$node = $xml.configuration.appSettings.add | 
-where { $_.key -eq "TenantId" }
-$node.value = $TenantId
+
+foreach ($key in $cdmconfig.keys) {
+    $node = $xml.configuration.appSettings.add | 
+    where { $_.key -eq $key }
+    $node.value = $cdmconfig[$key]
+
+}
 
 $xml.Save($configpath)
